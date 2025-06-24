@@ -163,3 +163,7 @@ cython_debug/
 
 # Debug and complete data
 _xtr/
+
+
+# Ignore GYAFC dataset
+data/GYAFC/
