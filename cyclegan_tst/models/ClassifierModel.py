@@ -21,7 +21,7 @@ class ClassifierModel(nn.Module):
         self.padding = padding
 
         self.model = AutoModelForSequenceClassification.from_pretrained(pretrained_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(f"{pretrained_path}tokenizer/")
+        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_path)
         self.model.eval()
     
     def eval(self):

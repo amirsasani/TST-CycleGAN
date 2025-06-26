@@ -27,7 +27,7 @@ class DiscriminatorModel(nn.Module):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         else:
             self.model = AutoModelForSequenceClassification.from_pretrained(pretrained_path)
-            self.tokenizer = AutoTokenizer.from_pretrained(f"{pretrained_path}tokenizer/")
+            self.tokenizer = AutoTokenizer.from_pretrained(pretrained_path)
     
 
     def train(self):

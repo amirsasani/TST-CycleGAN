@@ -9,6 +9,11 @@ from sklearn.metrics import classification_report
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments, EarlyStoppingCallback
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 SEED = 42
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
@@ -39,9 +44,6 @@ parser.add_argument('--eval_strategy',    type=str, dest="eval_strategy",    hel
 parser.add_argument('--eval_steps',       type=int, dest="eval_steps",       help='How many training steps between two evaluations.')
 
 parser.add_argument('--comet_logging', action='store_true', dest="comet_logging",   default=False, help='Set flag to enable comet logging')
-parser.add_argument('--comet_key',       type=str,  dest="comet_key",       default=None,  help='Comet API key to log some metrics')
-parser.add_argument('--comet_workspace', type=str,  dest="comet_workspace", default=None,  help='Comet workspace name (usually username in Comet, used only if comet_key is not None)')
-parser.add_argument('--comet_project_name',  type=str,  dest="comet_project_name",  default=None,  help='Comet experiment name (used only if comet_key is not None)')
 
 args = parser.parse_args()
 
@@ -157,9 +159,9 @@ trainer_log['test_f1'] = test_metrics['f1_macro']
 pickle.dump(trainer_log, open(f'{output_dir}log.pickle', 'wb'))
 
 if args.comet_logging:
-    experiment = Experiment(api_key=args.comet_key,
-                            project_name=args.comet_project_name,
-                            workspace=args.comet_workspace)
+    experiment = Experiment(api_key=os.getenv("COMET_KEY"),
+                project_name=os.getenv("COMET_PROJECT_NAME"),
+                workspace=os.getenv("COMET_WORKSPACE"))
     experiment.log_parameters(hyper_params)
 
     with experiment.train():

@@ -81,7 +81,7 @@ def compute_classif_metrics(pred_A, pred_B, pretrained_classifier_eval, batch_si
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     truncation, padding = 'longest_first', 'max_length'
     classifier = AutoModelForSequenceClassification.from_pretrained(pretrained_classifier_eval)
-    classifier_tokenizer = AutoTokenizer.from_pretrained(f'{pretrained_classifier_eval}tokenizer/')
+    classifier_tokenizer = AutoTokenizer.from_pretrained(pretrained_classifier_eval)
     classifier.to(device)
     classifier.eval()
 

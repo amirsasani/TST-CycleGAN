@@ -53,7 +53,7 @@ class Evaluator():
         truncation, padding = 'longest_first', 'max_length'
         if 'lambdas' not in vars(self.args) or self.args.lambdas[4] == 0 or self.args.pretrained_classifier_eval != self.args.pretrained_classifier_model:
             classifier = AutoModelForSequenceClassification.from_pretrained(self.args.pretrained_classifier_eval)
-            classifier_tokenizer = AutoTokenizer.from_pretrained(f'{self.args.pretrained_classifier_eval}tokenizer/')
+            classifier_tokenizer = AutoTokenizer.from_pretrained(self.args.pretrained_classifier_eval)
             classifier.to(device)
         else:
             classifier = self.cycleGAN.Cls.model
