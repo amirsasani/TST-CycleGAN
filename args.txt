@@ -15,8 +15,8 @@
 --epochs=30
 --learning_rate=5e-5
 --max_sequence_length=64
---max_samples_train=15000
---max_samples_eval=6000
+--max_samples_train=1000
+--max_samples_eval=400
 --batch_size=8
 --save_base_folder=./ckpts/
 --save_steps=1
