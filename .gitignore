@@ -167,3 +167,6 @@ _xtr/
 
 # Ignore GYAFC dataset
 data/GYAFC/
+
+# Ignore .idea directory
+.idea/
