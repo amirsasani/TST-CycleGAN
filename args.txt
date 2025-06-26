@@ -8,7 +8,7 @@
 --path_paral_eval_ref=./data/GYAFC/family_relationships/references/dev/
 --n_references=1
 --shuffle
---generator_model_tag=google-t5/t5-small
+--generator_model_tag=t5-small
 --discriminator_model_tag=distilbert-base-uncased
 --pretrained_classifier_model=bert-base-cased
 --lambdas=10|1|1|1|1
