@@ -38,7 +38,7 @@ random.seed(SEED)
     ----- ----- ----- ----- ----- ----- ----- -----
 '''
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 
 # basic parameters
 parser.add_argument('--style_a', type=str, dest="style_a", help='style A for the style transfer task (source style for G_ab).')
