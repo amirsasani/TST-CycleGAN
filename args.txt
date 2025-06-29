@@ -3,9 +3,9 @@
 --lang=en
 --path_mono_A=./data/GYAFC/family_relationships/train.0.txt
 --path_mono_B=./data/GYAFC/family_relationships/train.1.txt
---path_paral_A_eval=./data/GYAFC/family_relationships/dev.0.txt
---path_paral_B_eval=./data/GYAFC/family_relationships/dev.1.txt
---path_paral_eval_ref=./data/GYAFC/family_relationships/references/dev/
+--path_mono_A_eval=./data/GYAFC/family_relationships/dev.0.txt
+--path_mono_B_eval=./data/GYAFC/family_relationships/dev.1.txt
+--path_mono_eval_ref=./data/GYAFC/family_relationships/references/dev/
 --shuffle
 --generator_model_tag=t5-small
 --discriminator_model_tag=distilbert-base-uncased
