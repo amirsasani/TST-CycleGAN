@@ -66,9 +66,9 @@ def compute_metric(predictions, references, metric_name, lang='en'):
                 tmp_rouge1, tmp_rouge2, tmp_rougeL = [], [], []
                 for r in ref:
                     res = rouge.compute(predictions=[pred], references=[r], use_aggregator=False)
-                    tmp_rouge1.append(res['rouge1'][0].fmeasure)
-                    tmp_rouge2.append(res['rouge2'][0].fmeasure)
-                    tmp_rougeL.append(res['rougeL'][0].fmeasure)
+                    tmp_rouge1.append(res['rouge1'][0])
+                    tmp_rouge2.append(res['rouge2'][0])
+                    tmp_rougeL.append(res['rougeL'][0])
                 scores.append([max(tmp_rouge1), max(tmp_rouge2), max(tmp_rougeL)])
             elif metric_name == 'bertscore':
                 res = bertscore.compute(predictions=[pred], references=[ref], lang=lang, device=device)
