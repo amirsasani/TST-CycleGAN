@@ -1,5 +1,3 @@
-from multiprocessing import freeze_support
-
 from comet_ml import Experiment, ExistingExperiment
 
 from data.datasets import MonostyleDataset, ParallelRefDataset
@@ -40,7 +38,7 @@ random.seed(SEED)
     ----- ----- ----- ----- ----- ----- ----- -----
 '''
 
-parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
+parser = argparse.ArgumentParser()
 
 # basic parameters
 parser.add_argument('--style_a', type=str, dest="style_a", help='style A for the style transfer task (source style for G_ab).')
@@ -97,314 +95,318 @@ parser.add_argument('--lambda_file', type=str, dest="lambda_file", default=None,
 
 # arguments for comet
 parser.add_argument('--comet_logging', action='store_true', dest="comet_logging",   default=False, help='Set flag to enable comet logging')
+parser.add_argument('--comet_key',       type=str,  dest="comet_key",       default=None,  help='Comet API key to log some metrics')
+parser.add_argument('--comet_workspace', type=str,  dest="comet_workspace", default=None,  help='Comet workspace name (usually username in Comet, used only if comet_key is not None)')
+parser.add_argument('--comet_project_name',  type=str,  dest="comet_project_name",  default=None,  help='Comet experiment name (used only if comet_key is not None)')
+parser.add_argument('--comet_exp',  type=str,  dest="comet_exp",  default=None,  help='Comet experiment key to continue logging (used only if comet_key is not None)')
 
 args = parser.parse_args()
 
-def main():
-    style_a = args.style_a
-    style_b = args.style_b
-    max_samples_train = args.max_samples_train
-    max_samples_eval = args.max_samples_eval
+args.comet_key = os.getenv("COMET_KEY", "")
+args.comet_workspace = os.getenv("COMET_WORKSPACE", "")
+args.comet_project_name = os.getenv("COMET_PROJECT_NAME", "")
+args.comet_exp = os.getenv("COMET_EXP_GROUP", "")
 
-    if args.lambda_file is not None:
-        while not os.path.exists(args.lambda_file):
-            time.sleep(60)
-        with open(args.lambda_file, 'r') as f:
-            args.lambdas = f.read()
-        os.remove(args.lambda_file)
+style_a = args.style_a
+style_b = args.style_b
+max_samples_train = args.max_samples_train
+max_samples_eval = args.max_samples_eval
 
-    hyper_params = {}
-    print ("Arguments summary: \n ")
-    for key, value in vars(args).items():
-        hyper_params[key] = value
-        print (f"\t{key}:\t\t{value}")
+if args.lambda_file is not None:
+    while not os.path.exists(args.lambda_file):
+        time.sleep(60)
+    with open(args.lambda_file, 'r') as f:
+        args.lambdas = f.read()
+    os.remove(args.lambda_file)
 
-    # lambdas: cycle-consistency, generator-fooling, disc-fake, disc-real, classifier-guided
-    lambdas = [float(l) for l in args.lambdas.split('|')]
-    args.lambdas = lambdas
-        
-    mono_ds_a = MonostyleDataset(dataset_format="line_file",
-                                style=style_a,
-                                dataset_path=args.path_mono_A,
-                                separator='\n',
-                                max_dataset_samples=args.max_samples_train)
+hyper_params = {}
+print ("Arguments summary: \n ")
+for key, value in vars(args).items():
+    hyper_params[key] = value
+    print (f"\t{key}:\t\t{value}")
 
-    mono_ds_b = MonostyleDataset(dataset_format="line_file",
-                                style=style_b,
-                                dataset_path=args.path_mono_B,
-                                separator='\n',
-                                max_dataset_samples=args.max_samples_train)
+# lambdas: cycle-consistency, generator-fooling, disc-fake, disc-real, classifier-guided
+lambdas = [float(l) for l in args.lambdas.split('|')]
+args.lambdas = lambdas
+    
+mono_ds_a = MonostyleDataset(dataset_format="line_file",
+                            style=style_a,
+                            dataset_path=args.path_mono_A,
+                            separator='\n',
+                            max_dataset_samples=args.max_samples_train)
 
-    if args.nonparal_same_size:
-        mono_ds_a_len, mono_ds_b_len = len(mono_ds_a), len(mono_ds_b)
-        if mono_ds_a_len > mono_ds_b_len: mono_ds_a.reduce_data(mono_ds_b_len)
-        else: mono_ds_b.reduce_data(mono_ds_a_len)
+mono_ds_b = MonostyleDataset(dataset_format="line_file",
+                            style=style_b,
+                            dataset_path=args.path_mono_B,
+                            separator='\n',
+                            max_dataset_samples=args.max_samples_train)
 
-    if args.n_references is not None:
-        parallel_ds_evalAB = ParallelRefDataset(dataset_format='line_file',
-                                                style_src=style_a,
-                                                style_ref=style_b,
-                                                dataset_path_src=args.path_paral_A_eval,
-                                                dataset_path_ref=args.path_paral_eval_ref,
-                                                n_ref=args.n_references,
-                                                separator_src='\n',
-                                                separator_ref='\n',
-                                                max_dataset_samples=args.max_samples_eval)
-        
-        parallel_ds_evalBA = ParallelRefDataset(dataset_format='line_file',
-                                                style_src=style_b,
-                                                style_ref=style_a,
-                                                dataset_path_src=args.path_paral_B_eval,
-                                                dataset_path_ref=args.path_paral_eval_ref,
-                                                n_ref=args.n_references,
-                                                separator_src='\n',
-                                                separator_ref='\n',
-                                                max_dataset_samples=args.max_samples_eval)
-    else:
-        mono_ds_a_eval = MonostyleDataset(dataset_format="line_file",
-                                        style=style_a,
-                                        dataset_path=args.path_mono_A_eval,
-                                        separator='\n',
-                                        max_dataset_samples=args.max_samples_eval)
+if args.nonparal_same_size:
+    mono_ds_a_len, mono_ds_b_len = len(mono_ds_a), len(mono_ds_b)
+    if mono_ds_a_len > mono_ds_b_len: mono_ds_a.reduce_data(mono_ds_b_len)
+    else: mono_ds_b.reduce_data(mono_ds_a_len)
 
-        mono_ds_b_eval = MonostyleDataset(dataset_format="line_file",
-                                        style=style_b,
-                                        dataset_path=args.path_mono_B_eval,
-                                        separator='\n',
-                                        max_dataset_samples=args.max_samples_eval)
+if args.n_references is not None:
+    parallel_ds_evalAB = ParallelRefDataset(dataset_format='line_file',
+                                            style_src=style_a,
+                                            style_ref=style_b,
+                                            dataset_path_src=args.path_paral_A_eval,
+                                            dataset_path_ref=args.path_paral_eval_ref,
+                                            n_ref=args.n_references,
+                                            separator_src='\n',
+                                            separator_ref='\n',
+                                            max_dataset_samples=args.max_samples_eval)
+    
+    parallel_ds_evalBA = ParallelRefDataset(dataset_format='line_file',
+                                            style_src=style_b,
+                                            style_ref=style_a,
+                                            dataset_path_src=args.path_paral_B_eval,
+                                            dataset_path_ref=args.path_paral_eval_ref,
+                                            n_ref=args.n_references,
+                                            separator_src='\n',
+                                            separator_ref='\n',
+                                            max_dataset_samples=args.max_samples_eval)
+else:
+    mono_ds_a_eval = MonostyleDataset(dataset_format="line_file",
+                                      style=style_a,
+                                      dataset_path=args.path_mono_A_eval,
+                                      separator='\n',
+                                      max_dataset_samples=args.max_samples_eval)
 
-    print (f"Mono A  : {len(mono_ds_a)}")
-    print (f"Mono B  : {len(mono_ds_b)}")
-    if args.n_references is not None:
-        print (f"Parallel AB eval: {len(parallel_ds_evalAB)}")
-        print (f"Parallel BA eval: {len(parallel_ds_evalBA)}")
-    else:
-        print (f"Mono A eval: {len(mono_ds_a_eval)}")
-        print (f"Mono B eval: {len(mono_ds_b_eval)}")
-    print()
+    mono_ds_b_eval = MonostyleDataset(dataset_format="line_file",
+                                      style=style_b,
+                                      dataset_path=args.path_mono_B_eval,
+                                      separator='\n',
+                                      max_dataset_samples=args.max_samples_eval)
+
+print (f"Mono A  : {len(mono_ds_a)}")
+print (f"Mono B  : {len(mono_ds_b)}")
+if args.n_references is not None:
+    print (f"Parallel AB eval: {len(parallel_ds_evalAB)}")
+    print (f"Parallel BA eval: {len(parallel_ds_evalBA)}")
+else:
+    print (f"Mono A eval: {len(mono_ds_a_eval)}")
+    print (f"Mono B eval: {len(mono_ds_b_eval)}")
+print()
 
 
-    mono_dl_a = DataLoader(mono_ds_a,
-                            batch_size=args.batch_size,
-                            shuffle=args.shuffle,
-                            num_workers=args.num_workers,
-                            pin_memory=args.pin_memory)
+mono_dl_a = DataLoader(mono_ds_a,
+                        batch_size=args.batch_size,
+                        shuffle=args.shuffle,
+                        num_workers=args.num_workers,
+                        pin_memory=args.pin_memory)
 
-    mono_dl_b = DataLoader(mono_ds_b,
-                            batch_size=args.batch_size,
-                            shuffle=args.shuffle,
-                            num_workers=args.num_workers,
-                            pin_memory=args.pin_memory)
-    del mono_ds_a, mono_ds_b
+mono_dl_b = DataLoader(mono_ds_b,
+                        batch_size=args.batch_size,
+                        shuffle=args.shuffle,
+                        num_workers=args.num_workers,
+                        pin_memory=args.pin_memory)
+del mono_ds_a, mono_ds_b
 
-    if args.n_references is not None:
-        parallel_dl_evalAB = DataLoader(parallel_ds_evalAB,
-                                        batch_size=args.batch_size,
-                                        shuffle=False,
-                                        num_workers=args.num_workers,
-                                        pin_memory=args.pin_memory,
-                                        collate_fn=ParallelRefDataset.customCollate)
-        
-        parallel_dl_evalBA = DataLoader(parallel_ds_evalBA,
-                                        batch_size=args.batch_size,
-                                        shuffle=False,
-                                        num_workers=args.num_workers,
-                                        pin_memory=args.pin_memory,
-                                        collate_fn=ParallelRefDataset.customCollate)
-        del parallel_ds_evalAB, parallel_ds_evalBA
-    else:
-        mono_dl_a_eval = DataLoader(mono_ds_a_eval,
+if args.n_references is not None:
+    parallel_dl_evalAB = DataLoader(parallel_ds_evalAB,
                                     batch_size=args.batch_size,
                                     shuffle=False,
                                     num_workers=args.num_workers,
-                                    pin_memory=args.pin_memory)
-
-        mono_dl_b_eval = DataLoader(mono_ds_b_eval,
+                                    pin_memory=args.pin_memory,
+                                    collate_fn=ParallelRefDataset.customCollate)
+    
+    parallel_dl_evalBA = DataLoader(parallel_ds_evalBA,
                                     batch_size=args.batch_size,
                                     shuffle=False,
                                     num_workers=args.num_workers,
-                                    pin_memory=args.pin_memory)
-        del mono_ds_a_eval, mono_ds_b_eval
+                                    pin_memory=args.pin_memory,
+                                    collate_fn=ParallelRefDataset.customCollate)
+    del parallel_ds_evalAB, parallel_ds_evalBA
+else:
+    mono_dl_a_eval = DataLoader(mono_ds_a_eval,
+                                batch_size=args.batch_size,
+                                shuffle=False,
+                                num_workers=args.num_workers,
+                                pin_memory=args.pin_memory)
+
+    mono_dl_b_eval = DataLoader(mono_ds_b_eval,
+                                batch_size=args.batch_size,
+                                shuffle=False,
+                                num_workers=args.num_workers,
+                                pin_memory=args.pin_memory)
+    del mono_ds_a_eval, mono_ds_b_eval
+
+if args.n_references is not None:
+    print (f"Parallel AB eval (batches): {len(parallel_dl_evalAB)}")
+    print (f"Parallel BA eval (batches): {len(parallel_dl_evalBA)}")
+else:
+    print (f"Mono A eval (batches): {len(mono_dl_a_eval)}")
+    print (f"Mono B eval (batches): {len(mono_dl_b_eval)}")
+
+
+''' 
+    ----- ----- ----- ----- ----- ----- ----- -----
+              Instantiate Generators       
+    ----- ----- ----- ----- ----- ----- ----- -----
+'''
+
+if args.from_pretrained is not None:
+    G_ab = GeneratorModel(args.generator_model_tag, f'{args.from_pretrained}G_ab/', max_seq_length=args.max_sequence_length)
+    G_ba = GeneratorModel(args.generator_model_tag, f'{args.from_pretrained}G_ba/', max_seq_length=args.max_sequence_length)
+    print('Generator pretrained models loaded correctly')
+else:
+    G_ab = GeneratorModel(args.generator_model_tag, max_seq_length=args.max_sequence_length)
+    G_ba = GeneratorModel(args.generator_model_tag, max_seq_length=args.max_sequence_length)
+    print('Generator pretrained models not loaded - Initial weights will be used')
+
+
+''' 
+    ----- ----- ----- ----- ----- ----- ----- -----
+             Instantiate Discriminators       
+    ----- ----- ----- ----- ----- ----- ----- -----
+'''
+
+if args.from_pretrained is not None:
+    D_ab = DiscriminatorModel(args.discriminator_model_tag, f'{args.from_pretrained}D_ab/', max_seq_length=args.max_sequence_length)
+    D_ba = DiscriminatorModel(args.discriminator_model_tag, f'{args.from_pretrained}D_ba/', max_seq_length=args.max_sequence_length)
+    print('Discriminator pretrained models loaded correctly')
+else:
+    D_ab = DiscriminatorModel(args.discriminator_model_tag, max_seq_length=args.max_sequence_length)
+    D_ba = DiscriminatorModel(args.discriminator_model_tag, max_seq_length=args.max_sequence_length)
+    print('Discriminator pretrained models not loaded - Initial weights will be used')
+
+
+''' 
+    ----- ----- ----- ----- ----- ----- ----- -----
+             Instantiate Classifier       
+    ----- ----- ----- ----- ----- ----- ----- -----
+'''
+
+if lambdas[4] != 0:
+    Cls = ClassifierModel(args.pretrained_classifier_model, max_seq_length=args.max_sequence_length)
+    print('Classifier pretrained model loaded correctly')
+else:
+    Cls = None
+
+
+''' 
+    ----- ----- ----- ----- ----- ----- ----- -----
+                    SETTINGS       
+    ----- ----- ----- ----- ----- ----- ----- -----
+'''
+
+if args.use_cuda_if_available:
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+else:
+    device = torch.device("cpu")
+
+cycleGAN = CycleGANModel(G_ab, G_ba, D_ab, D_ba, Cls, device=device)
+
+n_batch_epoch = min(len(mono_dl_a), len(mono_dl_b))
+num_training_steps = args.epochs * n_batch_epoch
+
+print(f"Total number of training steps: {num_training_steps}")
+
+warmup_steps = int(0.1*num_training_steps) if args.warmup else 0
+
+optimizer = AdamW(cycleGAN.get_optimizer_parameters(), lr=args.learning_rate)
+# scheduler types: ["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"]
+lr_scheduler = get_scheduler(args.lr_scheduler_type, optimizer=optimizer, num_warmup_steps=warmup_steps, num_training_steps=num_training_steps)
+    
+start_epoch = 0
+current_training_step = 0
+
+if args.from_pretrained is not None:
+    checkpoint = torch.load(f"{args.from_pretrained}checkpoint.pth", map_location=torch.device("cpu"))
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+    start_epoch = checkpoint['epoch']
+    current_training_step = checkpoint['training_step']
+    del checkpoint
+
+''' 
+    ----- ----- ----- ----- ----- ----- ----- -----
+                 COMET LOGGING SETUP
+    ----- ----- ----- ----- ----- ----- ----- -----
+'''
+
+if args.comet_logging:
+    if args.from_pretrained is not None:
+        experiment = ExistingExperiment(api_key=args.comet_key, previous_experiment=args.comet_exp)
+    else:
+        experiment = Experiment(
+            api_key=args.comet_key,
+            project_name=args.comet_project_name,
+            workspace=args.comet_workspace,
+        )
+    experiment.log_parameters(hyper_params)
+else:
+    experiment = None
+
+loss_logging = {'Cycle Loss A-B-A':[], 'Loss generator  A-B':[], 'Classifier-guided A-B':[], 'Loss D(A->B)':[],
+                'Cycle Loss B-A-B':[], 'Loss generator  B-A':[], 'Classifier-guided B-A':[], 'Loss D(B->A)':[]}
+loss_logging['hyper_params'] = hyper_params
+
+''' 
+    ----- ----- ----- ----- ----- ----- ----- -----
+                    TRAINING LOOP       
+    ----- ----- ----- ----- ----- ----- ----- -----
+'''
+
+progress_bar = tqdm(range(num_training_steps))
+progress_bar.update(current_training_step)
+
+evaluator = Evaluator(cycleGAN, args, experiment)
+
+print('Start training...')
+for epoch in range(start_epoch, args.epochs):
+    print (f"\nTraining epoch: {epoch}")
+    cycleGAN.train() # set training mode
+
+    for unsupervised_a, unsupervised_b in zip(mono_dl_a, mono_dl_b):
+        len_a, len_b = len(unsupervised_a), len(unsupervised_b)
+        if len_a > len_b: unsupervised_a = unsupervised_a[:len_b]
+        else: unsupervised_b = unsupervised_b[:len_a]
+
+        cycleGAN.training_cycle(sentences_a=unsupervised_a,
+                                sentences_b=unsupervised_b,
+                                lambdas=lambdas,
+                                comet_experiment=experiment,
+                                loss_logging=loss_logging,
+                                training_step=current_training_step)
+
+        optimizer.step()
+        lr_scheduler.step()
+        optimizer.zero_grad()
+        progress_bar.update(1)
+        current_training_step += 1
+
+        # dummy classification metrics/BERTScore computation to see if it fits in GPU
+        if current_training_step==5:
+            if args.n_references is None: evaluator.dummy_classif()
+            elif args.bertscore: evaluator.dummy_bscore()
+        if (args.eval_strategy == "steps" and current_training_step%args.eval_steps==0) or (epoch < args.additional_eval and current_training_step%(n_batch_epoch//2+1)==0):
+            if args.n_references is not None:
+                evaluator.run_eval_ref(epoch, current_training_step, 'validation', parallel_dl_evalAB, parallel_dl_evalBA)
+            else:
+                evaluator.run_eval_mono(epoch, current_training_step, 'validation', mono_dl_a_eval, mono_dl_b_eval)
+            cycleGAN.train()
 
     if args.n_references is not None:
-        print (f"Parallel AB eval (batches): {len(parallel_dl_evalAB)}")
-        print (f"Parallel BA eval (batches): {len(parallel_dl_evalBA)}")
+        evaluator.run_eval_ref(epoch, current_training_step, 'validation', parallel_dl_evalAB, parallel_dl_evalBA)
     else:
-        print (f"Mono A eval (batches): {len(mono_dl_a_eval)}")
-        print (f"Mono B eval (batches): {len(mono_dl_b_eval)}")
+        evaluator.run_eval_mono(epoch, current_training_step, 'validation', mono_dl_a_eval, mono_dl_b_eval)
+    if epoch%args.save_steps==0:
+        cycleGAN.save_models(f"{args.save_base_folder}epoch_{epoch}/")
+        checkpoint = {'epoch':epoch+1, 'training_step':current_training_step, 'optimizer':optimizer.state_dict(), 'lr_scheduler':lr_scheduler.state_dict()}
+        torch.save(checkpoint, f"{args.save_base_folder}epoch_{epoch}/checkpoint.pth")
+        if epoch > 0 and os.path.exists(f"{args.save_base_folder}epoch_{epoch-1}/checkpoint.pth"):
+            os.remove(f"{args.save_base_folder}epoch_{epoch-1}/checkpoint.pth")
+        if epoch > 0 and os.path.exists(f"{args.save_base_folder}loss.pickle"):
+            os.remove(f"{args.save_base_folder}loss.pickle")
+        pickle.dump(loss_logging, open(f"{args.save_base_folder}loss.pickle", 'wb'))
+    if args.control_file is not None and os.path.exists(args.control_file):
+        with open(args.control_file, 'r') as f:
+            if f.read() == 'STOP':
+                print(f'STOP command received - Stopped at epoch {epoch}')
+                os.remove(args.control_file)
+                break
+    cycleGAN.train()
 
-
-    ''' 
-        ----- ----- ----- ----- ----- ----- ----- -----
-                Instantiate Generators       
-        ----- ----- ----- ----- ----- ----- ----- -----
-    '''
-
-    if args.from_pretrained is not None:
-        G_ab = GeneratorModel(args.generator_model_tag, f'{args.from_pretrained}G_ab/', max_seq_length=args.max_sequence_length)
-        G_ba = GeneratorModel(args.generator_model_tag, f'{args.from_pretrained}G_ba/', max_seq_length=args.max_sequence_length)
-        print('Generator pretrained models loaded correctly')
-    else:
-        G_ab = GeneratorModel(args.generator_model_tag, max_seq_length=args.max_sequence_length)
-        G_ba = GeneratorModel(args.generator_model_tag, max_seq_length=args.max_sequence_length)
-        print('Generator pretrained models not loaded - Initial weights will be used')
-
-
-    ''' 
-        ----- ----- ----- ----- ----- ----- ----- -----
-                Instantiate Discriminators       
-        ----- ----- ----- ----- ----- ----- ----- -----
-    '''
-
-    if args.from_pretrained is not None:
-        D_ab = DiscriminatorModel(args.discriminator_model_tag, f'{args.from_pretrained}D_ab/', max_seq_length=args.max_sequence_length)
-        D_ba = DiscriminatorModel(args.discriminator_model_tag, f'{args.from_pretrained}D_ba/', max_seq_length=args.max_sequence_length)
-        print('Discriminator pretrained models loaded correctly')
-    else:
-        D_ab = DiscriminatorModel(args.discriminator_model_tag, max_seq_length=args.max_sequence_length)
-        D_ba = DiscriminatorModel(args.discriminator_model_tag, max_seq_length=args.max_sequence_length)
-        print('Discriminator pretrained models not loaded - Initial weights will be used')
-
-
-    ''' 
-        ----- ----- ----- ----- ----- ----- ----- -----
-                Instantiate Classifier       
-        ----- ----- ----- ----- ----- ----- ----- -----
-    '''
-
-    if lambdas[4] != 0:
-        Cls = ClassifierModel(args.pretrained_classifier_model, max_seq_length=args.max_sequence_length)
-        print('Classifier pretrained model loaded correctly')
-    else:
-        Cls = None
-
-
-    ''' 
-        ----- ----- ----- ----- ----- ----- ----- -----
-                        SETTINGS       
-        ----- ----- ----- ----- ----- ----- ----- -----
-    '''
-
-    if args.use_cuda_if_available:
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    else:
-        device = torch.device("cpu")
-
-    cycleGAN = CycleGANModel(G_ab, G_ba, D_ab, D_ba, Cls, device=device)
-
-    n_batch_epoch = min(len(mono_dl_a), len(mono_dl_b))
-    num_training_steps = args.epochs * n_batch_epoch
-
-    print(f"Total number of training steps: {num_training_steps}")
-
-    warmup_steps = int(0.1*num_training_steps) if args.warmup else 0
-
-    optimizer = AdamW(cycleGAN.get_optimizer_parameters(), lr=args.learning_rate)
-    # scheduler types: ["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"]
-    lr_scheduler = get_scheduler(args.lr_scheduler_type, optimizer=optimizer, num_warmup_steps=warmup_steps, num_training_steps=num_training_steps)
-        
-    start_epoch = 0
-    current_training_step = 0
-
-    if args.from_pretrained is not None:
-        checkpoint = torch.load(f"{args.from_pretrained}checkpoint.pth", map_location=torch.device("cpu"))
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-        start_epoch = checkpoint['epoch']
-        current_training_step = checkpoint['training_step']
-        del checkpoint
-
-    ''' 
-        ----- ----- ----- ----- ----- ----- ----- -----
-                    COMET LOGGING SETUP
-        ----- ----- ----- ----- ----- ----- ----- -----
-    '''
-
-    if args.comet_logging:
-        if args.from_pretrained is not None:
-            experiment = ExistingExperiment(api_key=os.getenv("COMET_KEY"), previous_experiment=os.getenv("COMET_EXP_GROUP"))
-        else:
-            experiment = Experiment(
-                api_key=os.getenv("COMET_KEY"),
-                project_name=os.getenv("COMET_PROJECT_NAME"),
-                workspace=os.getenv("COMET_WORKSPACE"),
-            )
-        experiment.log_parameters(hyper_params)
-    else:
-        experiment = None
-
-    loss_logging = {'Cycle Loss A-B-A':[], 'Loss generator  A-B':[], 'Classifier-guided A-B':[], 'Loss D(A->B)':[],
-                    'Cycle Loss B-A-B':[], 'Loss generator  B-A':[], 'Classifier-guided B-A':[], 'Loss D(B->A)':[]}
-    loss_logging['hyper_params'] = hyper_params
-
-    ''' 
-        ----- ----- ----- ----- ----- ----- ----- -----
-                        TRAINING LOOP       
-        ----- ----- ----- ----- ----- ----- ----- -----
-    '''
-
-    progress_bar = tqdm(range(num_training_steps))
-    progress_bar.update(current_training_step)
-
-    evaluator = Evaluator(cycleGAN, args, experiment)
-
-    print('Start training...')
-    for epoch in range(start_epoch, args.epochs):
-        print (f"\nTraining epoch: {epoch}")
-        cycleGAN.train() # set training mode
-
-        for unsupervised_a, unsupervised_b in zip(mono_dl_a, mono_dl_b):
-            len_a, len_b = len(unsupervised_a), len(unsupervised_b)
-            if len_a > len_b: unsupervised_a = unsupervised_a[:len_b]
-            else: unsupervised_b = unsupervised_b[:len_a]
-
-            cycleGAN.training_cycle(sentences_a=unsupervised_a,
-                                    sentences_b=unsupervised_b,
-                                    lambdas=lambdas,
-                                    comet_experiment=experiment,
-                                    loss_logging=loss_logging,
-                                    training_step=current_training_step)
-
-            optimizer.step()
-            lr_scheduler.step()
-            optimizer.zero_grad()
-            progress_bar.update(1)
-            current_training_step += 1
-
-            # dummy classification metrics/BERTScore computation to see if it fits in GPU
-            if current_training_step==5:
-                if args.n_references is None: evaluator.dummy_classif()
-                elif args.bertscore: evaluator.dummy_bscore()
-            if (args.eval_strategy == "steps" and current_training_step%args.eval_steps==0) or (epoch < args.additional_eval and current_training_step%(n_batch_epoch//2+1)==0):
-                if args.n_references is not None:
-                    evaluator.run_eval_ref(epoch, current_training_step, 'validation', parallel_dl_evalAB, parallel_dl_evalBA)
-                else:
-                    evaluator.run_eval_mono(epoch, current_training_step, 'validation', mono_dl_a_eval, mono_dl_b_eval)
-                cycleGAN.train()
-
-        if args.n_references is not None:
-            evaluator.run_eval_ref(epoch, current_training_step, 'validation', parallel_dl_evalAB, parallel_dl_evalBA)
-        else:
-            evaluator.run_eval_mono(epoch, current_training_step, 'validation', mono_dl_a_eval, mono_dl_b_eval)
-        if epoch%args.save_steps==0:
-            cycleGAN.save_models(f"{args.save_base_folder}epoch_{epoch}/")
-            checkpoint = {'epoch':epoch+1, 'training_step':current_training_step, 'optimizer':optimizer.state_dict(), 'lr_scheduler':lr_scheduler.state_dict()}
-            torch.save(checkpoint, f"{args.save_base_folder}epoch_{epoch}/checkpoint.pth")
-            if epoch > 0 and os.path.exists(f"{args.save_base_folder}epoch_{epoch-1}/checkpoint.pth"):
-                os.remove(f"{args.save_base_folder}epoch_{epoch-1}/checkpoint.pth")
-            if epoch > 0 and os.path.exists(f"{args.save_base_folder}loss.pickle"):
-                os.remove(f"{args.save_base_folder}loss.pickle")
-            pickle.dump(loss_logging, open(f"{args.save_base_folder}loss.pickle", 'wb'))
-        if args.control_file is not None and os.path.exists(args.control_file):
-            with open(args.control_file, 'r') as f:
-                if f.read() == 'STOP':
-                    print(f'STOP command received - Stopped at epoch {epoch}')
-                    os.remove(args.control_file)
-                    break
-        cycleGAN.train()
-
-    print('End training...')
-
-if __name__ == '__main__':
-    freeze_support()
-    main()
+print('End training...')

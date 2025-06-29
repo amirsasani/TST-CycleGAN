@@ -9,7 +9,6 @@ from utils.utils import *
 
 import argparse
 import logging
-from dotenv import load_dotenv
 import os
 import numpy as np, pandas as pd
 import random
@@ -18,8 +17,6 @@ import torch
 from torch.utils.data import DataLoader
 
 logging.basicConfig(level=logging.INFO)
-
-load_dotenv()
 
 SEED = 42
 torch.manual_seed(SEED)
@@ -70,9 +67,13 @@ parser.add_argument('--test_id', type=str, dest="test_id", default=None, help='T
 
 # arguments for comet
 parser.add_argument('--comet_logging', action='store_true', dest="comet_logging",   default=False, help='Set flag to enable comet logging')
-parser.add_argument('--exp_group', type=str, dest="exp_group", default=None, help='To group experiments on Comet')
 
 args = parser.parse_args()
+
+args.comet_key = os.getenv("COMET_KEY", "")
+args.comet_workspace = os.getenv("COMET_WORKSPACE", "")
+args.comet_project_name = os.getenv("COMET_PROJECT_NAME", "")
+args.comet_exp = os.getenv("COMET_EXP_GROUP", "")
 
 style_a = args.style_a
 style_b = args.style_b
@@ -162,9 +163,9 @@ else:
     print (f"Mono B test (batches): {len(mono_dl_b_test)}")
 
 if args.comet_logging :
-    experiment = Experiment(api_key=os.getenv("COMET_KEY"),
-                            project_name=os.getenv("COMET_PROJECT_NAME"),
-                            workspace=os.getenv("COMET_WORKSPACE"))
+    experiment = Experiment(api_key=args.comet_key,
+                            project_name=args.comet_project_name,
+                            workspace=args.comet_workspace)
     experiment.log_parameters(hyper_params)
 else:
     experiment = None

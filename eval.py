@@ -36,9 +36,9 @@ class Evaluator():
                     tmp_rouge1, tmp_rouge2, tmp_rougeL = [], [], []
                     for r in ref:
                         res = self.rouge.compute(predictions=[pred], references=[r], use_aggregator=False)
-                        tmp_rouge1.append(res['rouge1'][0])
-                        tmp_rouge2.append(res['rouge2'][0])
-                        tmp_rougeL.append(res['rougeL'][0])
+                        tmp_rouge1.append(res['rouge1'][0].fmeasure)
+                        tmp_rouge2.append(res['rouge2'][0].fmeasure)
+                        tmp_rougeL.append(res['rougeL'][0].fmeasure)
                     scores.append([max(tmp_rouge1), max(tmp_rouge2), max(tmp_rougeL)])
                 elif metric_name == 'bertscore':
                     res = self.bertscore.compute(predictions=[pred], references=[ref], lang=self.args.lang)
@@ -53,7 +53,7 @@ class Evaluator():
         truncation, padding = 'longest_first', 'max_length'
         if 'lambdas' not in vars(self.args) or self.args.lambdas[4] == 0 or self.args.pretrained_classifier_eval != self.args.pretrained_classifier_model:
             classifier = AutoModelForSequenceClassification.from_pretrained(self.args.pretrained_classifier_eval)
-            classifier_tokenizer = AutoTokenizer.from_pretrained(self.args.pretrained_classifier_eval)
+            classifier_tokenizer = AutoTokenizer.from_pretrained(f'{self.args.pretrained_classifier_eval}tokenizer/')
             classifier.to(device)
         else:
             classifier = self.cycleGAN.Cls.model
