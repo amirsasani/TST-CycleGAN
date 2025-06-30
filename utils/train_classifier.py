@@ -1,6 +1,6 @@
 from comet_ml import Experiment
 
-from .utils import *
+from utils import *
 
 import argparse, pickle
 import numpy as np
