@@ -21,10 +21,10 @@ class ClassifierDataset(torch.utils.data.Dataset):
         return len(self.labels)
 
 
-def read_data(path, split, max_samples=None, lowercase=False):
+def read_data(path, split, max_samples=None, lowercase=False, extension='.txt'):
     data, labels = [], []
     for style in ['0', '1']:
-        full_path = path + split + f'.{style}'
+        full_path = path + split + f'.{style}' + extension
         with open(full_path) as input_file:
             if max_samples is not None:
                 data_tmp = input_file.read().split('\n')[:max_samples//2]
