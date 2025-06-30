@@ -47,6 +47,11 @@ parser.add_argument('--comet_logging', action='store_true', dest="comet_logging"
 
 args = parser.parse_args()
 
+args.comet_key = os.getenv("COMET_KEY", "")
+args.comet_workspace = os.getenv("COMET_WORKSPACE", "")
+args.comet_project_name = os.getenv("COMET_PROJECT_NAME", "")
+args.comet_exp = os.getenv("COMET_EXP_GROUP", "")
+
 hyper_params = {}
 print ("Arguments summary: \n ")
 for key,value in vars(args).items():
