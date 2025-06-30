@@ -6,7 +6,7 @@
 --path_mono_A_eval=./data/yelp/dev.0.txt
 --path_mono_B_eval=./data/yelp/dev.1.txt
 --shuffle
---generator_model_tag=google-t5/t5-large
+--generator_model_tag=t5-large
 --discriminator_model_tag=distilbert-base-uncased
 --pretrained_classifier_model=./classifiers/yelp/bert-base-uncased/
 --lambdas=10|1|1|1|1
