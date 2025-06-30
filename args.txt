@@ -20,6 +20,6 @@
 --save_base_folder=./ckpts/
 --save_steps=1
 --eval_strategy=steps
---eval_steps=10
+--eval_steps=1
 --pin_memory
 --comet_logging
