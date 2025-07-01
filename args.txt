@@ -8,7 +8,7 @@
 --shuffle
 --generator_model_tag=./pretrained_models/t5-large
 --discriminator_model_tag=./pretrained_models/distilbert-base-cased
---pretrained_classifier_model=./classifiers/family_relationships/bert-base-cased_5/
+--pretrained_classifier_model=./classifiers/family_relationships/bert-base-cased_5/checkpoints/checkpoint-1565/
 --lambdas=10|1|1|1|1
 --epochs=30
 --learning_rate=5e-5
