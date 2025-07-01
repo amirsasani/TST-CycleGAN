@@ -18,5 +18,6 @@
 --save_steps=1
 --eval_strategy=epochs
 --eval_steps=1
---pin_memory
+--max_samples_train=800
+--max_samples_eval=400
 --comet_logging
