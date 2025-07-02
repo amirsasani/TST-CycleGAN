@@ -6,7 +6,7 @@
 --path_mono_A_eval=./data/GYAFC/family_relationships/dev.0.txt
 --path_mono_B_eval=./data/GYAFC/family_relationships/dev.1.txt
 --shuffle
---generator_model_tag=./pretrained_models/t5-base
+--generator_model_tag=./pretrained_models/bart-base
 --discriminator_model_tag=./pretrained_models/distilbert-base-cased
 --pretrained_classifier_model=./classifiers/family_relationships/bert-base-cased_5/final/
 --pretrained_classifier_eval=./classifiers/family_relationships/bert-base-cased_5/final/
