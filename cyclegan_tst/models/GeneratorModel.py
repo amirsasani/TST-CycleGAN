@@ -26,7 +26,7 @@ class GeneratorModel(nn.Module):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         else:
             self.model = AutoModelForSeq2SeqLM.from_pretrained(pretrained_path)
-            self.tokenizer = AutoTokenizer.from_pretrained(pretrained_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(f"{pretrained_path}tokenizer/")
 
 
     def train(self):
