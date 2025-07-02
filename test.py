@@ -12,11 +12,14 @@ import logging
 import os
 import numpy as np, pandas as pd
 import random
+from dotenv import load_dotenv
 
 import torch
 from torch.utils.data import DataLoader
 
 logging.basicConfig(level=logging.INFO)
+
+load_dotenv()
 
 SEED = 42
 torch.manual_seed(SEED)
