@@ -13,7 +13,7 @@ To install the required libraries and dependencies, you can refer to the `env.ym
 
 Before experimenting, you can create a virtual environment for the project using Conda.
 ```
-conda create -f env.yml -n cyclegan_tst 
+conda create env -f env.yml -n cyclegan_tst 
 conda activate cyclegan_tst
 ```
 
