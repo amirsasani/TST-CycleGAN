@@ -52,7 +52,7 @@ You can train the proposed CycleGAN architecture for Text Style Transfer using t
 - learning_rate, epochs, batch_size: learning rate, number of epochs and batch size for model training
 
 As an example, to train the CycleGAN architecture for formality transfer using the GYAFC dataset (*Family & Relationships* domain), you can use the following command:
-```
+```python
 CUDA_VISIBLE_DEVICES=0 python train.py --style_a=informal --style_b=formal --lang=en \
                        --path_mono_A=./data/GYAFC/family_relationships/train.0.txt --path_mono_B=./data/GYAFC/family_relationships/train.1.txt \
                        --path_paral_A_eval=./data/GYAFC/family_relationships/dev.0.txt --path_paral_B_eval=./data/GYAFC/family_relationships/dev.1.txt --path_paral_eval_ref=./data/GYAFC/family_relationships/references/dev/ --n_references=4 --shuffle \
@@ -77,7 +77,7 @@ Once trained, you can evaluate the performance on the test set of the trained mo
 - path_paral_test_ref: path to the references for test
 
 As an example, to test the trained models for formality transfer using the GYAFC dataset (*Family & Relationships* domain), you can use the following command:
-```
+```python
 CUDA_VISIBLE_DEVICES=0 python test.py --style_a=informal --style_b=formal --lang=en \
                        --path_paral_A_test=./data/GYAFC/family_relationships/test.0.txt --path_paral_B_test=./data/GYAFC/family_relationships/test.1.txt --path_paral_test_ref=./data/GYAFC/family_relationships/references/test/ --n_references=4 \
                        --generator_model_tag=google-t5/t5-large --discriminator_model_tag=distilbert-base-cased \
