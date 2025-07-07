@@ -35,6 +35,9 @@ We could provide access to *mixed-style* data we use in our work after gaining a
 ### Sentiment transfer
 We use the [Yelp](https://papers.nips.cc/paper_files/paper/2017/hash/2d2c8394e31101a261abf1784302bf75-Abstract.html) dataset following the same splits as in [Li et al.](https://aclanthology.org/N18-1169/) available in the official [repository](https://github.com/lijuncen/Sentiment-and-Style-Transfer). Put it into the `data/yelp` folder and please name the files as `[train|dev|test].[0|1].txt`, where 0 is for negative sentiment and 1 is for positive sentiment.
 
+## .env file
+The repository includes a `.env.sample` file containing environment variables required for the Comet ML API key and other sensitive configurations. These values typically remain unchanged and should be kept secure. To use them, rename the file to `.env`.
+
 ## Training
 You can train the proposed CycleGAN architecture for Text Style Transfer using the `train.py` script. It can be customized using several command line arguments such as:
 - style_a/style_b: style A/B (i.e., informal/formal or negative/positive)
@@ -56,6 +59,11 @@ CUDA_VISIBLE_DEVICES=0 python train.py --style_a=informal --style_b=formal --lan
                        --generator_model_tag=google-t5/t5-large --discriminator_model_tag=distilbert-base-cased --pretrained_classifier_model=./classifiers/GYAFC/family_relationships/bert-base-cased_5/ \
                        --lambdas="10|1|1|1|1" --epochs=30 --learning_rate=5e-5 --max_sequence_length=64 --batch_size=8  \
                        --save_base_folder=./ckpts/ --save_steps=1 --eval_strategy=epochs --eval_steps=1  --pin_memory --use_cuda_if_available
+```
+
+I also changed some lines of training code to support arguments from a `.txt` file in order to make arguments more tidy and readable. Here is the usage:
+```python
+CUDA_VISIBLE_DEVICES=0 python train.py @args.txt
 ```
 
 ## Testing
