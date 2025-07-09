@@ -15,7 +15,7 @@
 --learning_rate=3e-5
 --max_sequence_length=64
 --batch_size=8
---save_base_folder=./ckpts/t5base_robertabase-cyclegan_GYAFC-family_formality
+--save_base_folder=./ckpts/bartbase_robertabase-cyclegan_GYAFC-family_formality
 --save_steps=3
 --eval_steps=3
 --eval_strategy=epochs
