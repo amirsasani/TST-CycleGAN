@@ -85,6 +85,16 @@ CUDA_VISIBLE_DEVICES=0 python test.py --style_a=informal --style_b=formal --lang
                        --from_pretrained=./ckpts/ --max_sequence_length=64 --batch_size=16 --pin_memory --use_cuda_if_available 
 ```
 
+## Evaluation Metrics Across Model Configurations
+
+| **Config** | **Generator** | **Discriminator** | **BLEU (%)** | **ROUGE-L (%)** | **Style Acc. (%)** |
+|------------|---------------|-------------------|---------------|------------------|---------------------|
+| 1          | T5-base       | DistilBERT        | 29.65         | 16.91            | **47.6**            |
+| 2          | BART-base     | DistilBERT        | **57.09**     | **99.97**        | 16.8                |
+| 3          | T5-base       | RoBERTa-base      | 30.98         | 22.81            | 45.3                |
+| 4          | BART-base     | RoBERTa-base      | 60.56         | 99.97            | 27.0                |
+
+
 ## Model checkpoints
 All model checkpoints are available on Hugging Face 🤗 at the following [collection](https://huggingface.co/collections/ggallipoli/text-style-transfer-674b4bf7faef0be38154e535).
 
